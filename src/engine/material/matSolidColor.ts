@@ -30,9 +30,11 @@ void main(){
 
 `;
 
-let g_shader = null;
+let g_shader: WebGLShader | null = null;
 
 class MatSolidColor extends Material {
+    color: number[];
+
     constructor(color = [1, 0, 0]) {
         super();
 
@@ -71,7 +73,7 @@ class MatSolidColor extends Material {
         pass.shader.setUniform("u_Color", this.color);
     }
 
-    setColor(color) {
+    setColor(color: number[]) {
         this.color = color;
     }
 }

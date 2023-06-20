@@ -1,105 +1,117 @@
 import { SceneNode } from "./SceneNode";
-import { SystemComponents } from "./systemComps";
+import { SystemComponents, Components } from "./systemComps";
 import { SceneForwardRenderer } from "./sceneForwardRenderer";
+import { Camera, Light, Projector } from "..";
 
 class Scene {
-  constructor() {
-    this._root = new SceneNode();
-    this._root._scene = this;
-    this.cameras = [];
-    this.lights = [];
-    this.projectors = [];
-    this.renderNodes = [];
+    _root: SceneNode;
+    cameras: Camera[];
+    lights: Light[];
+    projectors: Projector[];
 
-    this._ambientColor = [0.1, 0.1, 0.1];
+    renderNodes: SceneNode[];
 
-    this._sceneRenderer = new SceneForwardRenderer();
-  }
+    _ambientColor: number[];
 
-  set ambientColor(v) {
-    this._ambientColor = v;
-  }
+    _sceneRenderer;
 
-  get ambientColor() {
-    return this._ambientColor;
-  }
+    constructor() {
+        this._root = new SceneNode();
+        this._root._scene = this;
+        this.cameras = [];
+        this.lights = [];
+        this.projectors = [];
+        this.renderNodes = [];
 
-  get root() {
-    return this._root;
-  }
+        this._ambientColor = [0.1, 0.1, 0.1];
 
-  onAddNode(node) {
-    let camera = node.getComponent(SystemComponents.Camera);
-    if (camera != null) {
-      this.cameras.push(camera);
-      return;
+        this._sceneRenderer = new SceneForwardRenderer();
     }
 
-    let light = node.getComponent(SystemComponents.Light);
-    if (light != null) {
-      this.lights.push(light);
-      return;
+    set ambientColor(v) {
+        this._ambientColor = v;
     }
 
-    let projector = node.getComponent(SystemComponents.Projector);
-    if (projector != null) {
-      this.projectors.push(projector);
-      return;
+    get ambientColor() {
+        return this._ambientColor;
     }
 
-    this.renderNodes.push(node);
-  }
-
-  onRemoveNode(node) {
-    let camera = node.getComponent(SystemComponents.Camera);
-    if (camera != null) {
-      node.camera = null;
-      let idx = this.cameras.indexOf(camera);
-      if (idx >= 0) {
-        this.cameras.splice(idx, 1);
-      }
-      return;
+    get root() {
+        return this._root;
     }
 
-    let projector = node.getComponent(SystemComponents.Projector);
-    if (projector != null) {
-      node.projector = null;
-      let idx = this.projectors.indexOf(projector);
-      if (idx >= 0) {
-        this.projectors.splice(idx, 1);
-      }
-      return;
+    onAddNode(node) {
+        let camera = node.getComponent(SystemComponents.Camera);
+        if (camera != null) {
+            this.cameras.push(camera);
+            return;
+        }
+
+        let light = node.getComponent(SystemComponents.Light);
+        if (light != null) {
+            this.lights.push(light);
+            return;
+        }
+
+        let projector = node.getComponent(SystemComponents.Projector);
+        if (projector != null) {
+            this.projectors.push(projector);
+            return;
+        }
+
+        this.renderNodes.push(node);
     }
 
-    let light = node.getComponent(SystemComponents.Light);
-    if (light != null) {
-      node.light = null;
-      let idx = this.lights.indexOf(light);
-      if (idx >= 0) {
-        this.lights.splice(idx, 1);
-      }
-      return;
+    onRemoveNode(node) {
+        let camera = node.getComponent(SystemComponents.Camera);
+        if (camera != null) {
+            node.camera = null;
+            let idx = this.cameras.indexOf(camera);
+            if (idx >= 0) {
+                this.cameras.splice(idx, 1);
+            }
+            return;
+        }
+
+        let projector = node.getComponent(SystemComponents.Projector);
+        if (projector != null) {
+            node.projector = null;
+            let idx = this.projectors.indexOf(projector);
+            if (idx >= 0) {
+                this.projectors.splice(idx, 1);
+            }
+            return;
+        }
+
+        let light = node.getComponent(SystemComponents.Light);
+        if (light != null) {
+            node.light = null;
+            let idx = this.lights.indexOf(light);
+            if (idx >= 0) {
+                this.lights.splice(idx, 1);
+            }
+            return;
+        }
+
+        let idx = this.renderNodes.indexOf(node);
+        if (idx >= 0) {
+            this.renderNodes.splice(idx, 1);
+        }
     }
 
-    let idx = this.renderNodes.indexOf(node);
-    if (idx >= 0) {
-      this.renderNodes.splice(idx, 1);
+    onScreenResize(width: number, height: number) {
+        for (let camera of this.cameras) {
+            camera.onScreenResize(width, height);
+        }
     }
-  }
 
-  onScreenResize(width, height) {
-    for (let camera of this.cameras) {
-      camera.onScreenResize(width, height);
+    update() {
+        this.root.updateWorldMatrix();
     }
-  }
 
-  update() {
-    this.root.updateWorldMatrix();
-  }
-
-  render() {
-    this._sceneRenderer.render(this);
-  }
+    render() {
+        this._sceneRenderer.render(this);
+    }
 }
 
 export { Scene };

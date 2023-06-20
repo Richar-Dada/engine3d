@@ -1,9 +1,11 @@
 class Component {
-  constructor() {}
+    node;
 
-  setNode(node) {
-    this.node = node;
-  }
+    constructor() {}
+
+    setNode(node) {
+        this.node = node;
+    }
 }
 
 export { Component };

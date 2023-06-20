@@ -2,6 +2,7 @@
 import { Material, SystemUniforms } from "./material";
 import { VertexSemantic } from "../core/vertexFormat";
 import { LightMode } from "./renderPass";
+import { Texture2D } from "../core/texture";
 
 let vs = `
 attribute vec4 a_Position;
@@ -30,42 +31,43 @@ void main(){
 let g_shader = null;
 
 class MatMirror extends Material {
-  constructor() {
-    super();
+    _mainTexture: Texture2D | null;
+    constructor() {
+        super();
 
-    if (g_shader == null) {
-      g_shader = Material.createShader(vs, fs, [
-        { semantic: VertexSemantic.POSITION, name: "a_Position" },
-        { semantic: VertexSemantic.UV0, name: "a_Texcoord" },
-      ]);
+        if (g_shader == null) {
+            g_shader = Material.createShader(vs, fs, [
+                { semantic: VertexSemantic.POSITION, name: "a_Position" },
+                { semantic: VertexSemantic.UV0, name: "a_Texcoord" },
+            ]);
+        }
+
+        this.addRenderPass(g_shader, LightMode.None);
+
+        //default uniforms
+        this._mainTexture = null;
     }
 
-    this.addRenderPass(g_shader, LightMode.None);
-
-    //default uniforms
-    this._mainTexture = null;
-  }
-
-  //Override
-  get systemUniforms() {
-    return [SystemUniforms.MvpMatrix];
-  }
-
-  //Override
-  setCustomUniformValues(pass) {
-    if (this._mainTexture) {
-      this._mainTexture.bind();
-      pass.shader.setUniformSafe("u_texMain", 0);
+    //Override
+    get systemUniforms() {
+        return [SystemUniforms.MvpMatrix];
     }
-  }
 
-  set mainTexture(v) {
-    this._mainTexture = v;
-  }
+    //Override
+    setCustomUniformValues(pass) {
+        if (this._mainTexture) {
+            this._mainTexture.bind();
+            pass.shader.setUniformSafe("u_texMain", 0);
+        }
+    }
 
-  get mainTexture() {
-    return this._mainTexture;
-  }
+    set mainTexture(v) {
+        this._mainTexture = v;
+    }
+
+    get mainTexture() {
+        return this._mainTexture;
+    }
 }
 
 export { MatMirror };

@@ -1,145 +1,170 @@
 import { gl } from "./gl";
-import { VertexSemantic } from "./vertexFormat";
+import { Shader } from "./shader";
+import { VertexFormat, VertexSemantic } from "./vertexFormat";
 
 class VertexAttribInfo {
-  constructor(attribSemantic, attribSize) {
-    this.semantic = attribSemantic;
-    this.size = attribSize;
-    this.offset = 0;
-    this.data = null;
-  }
+    semantic: string;
+    size: number;
+    offset: number;
+    data: any;
+    constructor(attribSemantic: string, attribSize: number) {
+        this.semantic = attribSemantic;
+        this.size = attribSize;
+        this.offset = 0;
+        this.data = null;
+    }
 }
 
 class VertexBuffer {
-  constructor(vertexFormat) {
-    this._vertexCount = 0;
-    this._vertexStride = 0; // vertex data size in byte
-    this._vertexFormat = vertexFormat;
-    this._attribsInfo = {};
-    this._bufferData = null;
+    _vertexCount: number;
+    _vertexStride: number;
+    _vertexFormat: VertexFormat;
 
-    this.BYTES_PER_ELEMENT = 4; // for Float32Array
+    _bufferData: number[] | null;
+    _attribsInfo: Record<string, VertexAttribInfo>;
 
-    let attribNum = this._vertexFormat.attribs.length;
-    for (let i = 0; i < attribNum; ++i) {
-      let semantic = this._vertexFormat.attribs[i];
-      let size = this._vertexFormat.attribSizeMap[semantic];
-      if (size == null) {
-        console.error("VertexBuffer: bad semantic");
-      } else {
-        let info = new VertexAttribInfo(semantic, size);
-        this._attribsInfo[semantic] = info;
-      }
-    }
+    BYTES_PER_ELEMENT: number;
 
-    this._vbo = gl.createBuffer();
-  }
+    _vbo: WebGLBuffer | undefined | null;
 
-  setData(semantic, data) {
-    this._attribsInfo[semantic].data = data;
-  }
+    constructor(vertexFormat: VertexFormat) {
+        this._vertexCount = 0;
+        this._vertexStride = 0; // vertex data size in byte
+        this._vertexFormat = vertexFormat;
+        this._attribsInfo = {};
+        this._bufferData = null;
 
-  get vbo() {
-    return this._vbo;
-  }
+        this.BYTES_PER_ELEMENT = 4; // for Float32Array
 
-  get vertexCount() {
-    return this._vertexCount;
-  }
-
-  get vertexStride() {
-    return this._vertexStride;
-  }
-
-  destroy() {
-    gl.deleteBuffer(this._vbo);
-    this._vbo = 0;
-  }
-
-  //combine vertex attribute datas to a data array
-  _compile() {
-    let positionInfo = this._attribsInfo[VertexSemantic.POSITION];
-    if (positionInfo == null) {
-      console.error("VertexBuffer: no attrib position");
-      return;
-    }
-    if (positionInfo.data == null || positionInfo.data.length === 0) {
-      console.error("VertexBuffer: position data is empty");
-      return;
-    }
-
-    this._vertexCount = positionInfo.data.length / positionInfo.size;
-    this._vertexStride =
-      this._vertexFormat.getVertexSize() * this.BYTES_PER_ELEMENT;
-
-    this._bufferData = [];
-    for (let i = 0; i < this._vertexCount; ++i) {
-      for (let semantic of this._vertexFormat.attribs) {
-        let info = this._attribsInfo[semantic];
-        if (info == null || info.data == null) {
-          console.error("VertexBuffer: bad semantic " + semantic);
-          continue;
+        let attribNum = this._vertexFormat.attribs.length;
+        for (let i = 0; i < attribNum; ++i) {
+            let semantic = this._vertexFormat.attribs[i];
+            let size = this._vertexFormat.attribSizeMap[semantic];
+            if (size == null) {
+                console.error("VertexBuffer: bad semantic");
+            } else {
+                let info = new VertexAttribInfo(semantic, size);
+                this._attribsInfo[semantic] = info;
+            }
         }
-        for (let k = 0; k < info.size; ++k) {
-          let value = info.data[i * info.size + k];
-          if (value === undefined) {
-            console.error("VertexBuffer: missing value for " + semantic);
-          }
-          this._bufferData.push(value);
+
+        this._vbo = gl?.createBuffer();
+    }
+
+    setData(semantic: string, data: number[]) {
+        this._attribsInfo[semantic].data = data;
+    }
+
+    get vbo() {
+        return this._vbo;
+    }
+
+    get vertexCount() {
+        return this._vertexCount;
+    }
+
+    get vertexStride() {
+        return this._vertexStride;
+    }
+
+    destroy() {
+        if (this._vbo != undefined && gl) {
+            gl.deleteBuffer(this._vbo);
+            this._vbo = 0;
         }
-      }
     }
 
-    //compute offset for attrib info, and free info.data
-    let offset = 0;
-    for (let semantic of this._vertexFormat.attribs) {
-      let info = this._attribsInfo[semantic];
-      info.offset = offset;
-      info.data = null;
-      offset += info.size * this.BYTES_PER_ELEMENT;
+    //combine vertex attribute datas to a data array
+    _compile() {
+        let positionInfo = this._attribsInfo[VertexSemantic.POSITION];
+        if (positionInfo == null) {
+            console.error("VertexBuffer: no attrib position");
+            return;
+        }
+        if (positionInfo.data == null || positionInfo.data.length === 0) {
+            console.error("VertexBuffer: position data is empty");
+            return;
+        }
+
+        this._vertexCount = positionInfo.data.length / positionInfo.size;
+        this._vertexStride = this._vertexFormat.getVertexSize() * this.BYTES_PER_ELEMENT;
+
+        this._bufferData = [];
+        for (let i = 0; i < this._vertexCount; ++i) {
+            for (let semantic of this._vertexFormat.attribs) {
+                let info = this._attribsInfo[semantic];
+                if (info == null || info.data == null) {
+                    console.error("VertexBuffer: bad semantic " + semantic);
+                    continue;
+                }
+                for (let k = 0; k < info.size; ++k) {
+                    let value = info.data[i * info.size + k];
+                    if (value === undefined) {
+                        console.error("VertexBuffer: missing value for " + semantic);
+                    }
+                    this._bufferData.push(value);
+                }
+            }
+        }
+
+        //compute offset for attrib info, and free info.data
+        let offset = 0;
+        for (let semantic of this._vertexFormat.attribs) {
+            let info = this._attribsInfo[semantic];
+            info.offset = offset;
+            info.data = null;
+            offset += info.size * this.BYTES_PER_ELEMENT;
+        }
     }
-  }
 
-  //upload data to webGL, add free buffer data
-  upload() {
-    this._compile();
+    //upload data to webGL, add free buffer data
+    upload() {
+        if (!gl) {
+            throw new Error("webgl is null");
+        }
 
-    let buffer = new Float32Array(this._bufferData);
+        if (!this._bufferData || !this._vbo) {
+            return;
+        }
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this._vbo);
-    gl.bufferData(gl.ARRAY_BUFFER, buffer, gl.STATIC_DRAW);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        this._compile();
 
-    this._bufferData = null;
-  }
+        let buffer = new Float32Array(this._bufferData);
 
-  bindAttrib(shader) {
-    for (let semantic of this._vertexFormat.attribs) {
-      let info = this._attribsInfo[semantic];
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._vbo);
+        gl.bufferData(gl.ARRAY_BUFFER, buffer, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-      let location = shader.getAttributeLocation(semantic);
-      if (location >= 0) {
-        gl.vertexAttribPointer(
-          location,
-          info.size,
-          gl.FLOAT, //type
-          false, //normalized,
-          this._vertexStride,
-          info.offset
-        );
-        gl.enableVertexAttribArray(location);
-      }
+        this._bufferData = null;
     }
-  }
 
-  unbindAttrib(shader) {
-    for (let semantic of this._vertexFormat.attribs) {
-      let location = shader.getAttributeLocation(semantic);
-      if (location >= 0) {
-        gl.disableVertexAttribArray(location);
-      }
+    bindAttrib(shader: Shader) {
+        for (let semantic of this._vertexFormat.attribs) {
+            let info = this._attribsInfo[semantic];
+
+            let location = shader.getAttributeLocation(semantic);
+            if (location >= 0) {
+                gl?.vertexAttribPointer(
+                    location,
+                    info.size,
+                    gl.FLOAT, //type
+                    false, //normalized,
+                    this._vertexStride,
+                    info.offset,
+                );
+                gl?.enableVertexAttribArray(location);
+            }
+        }
     }
-  }
+
+    unbindAttrib(shader: Shader) {
+        for (let semantic of this._vertexFormat.attribs) {
+            let location = shader.getAttributeLocation(semantic);
+            if (location >= 0) {
+                gl?.disableVertexAttribArray(location);
+            }
+        }
+    }
 }
 
 export { VertexBuffer };
